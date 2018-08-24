@@ -40,7 +40,16 @@ Base.compilecache(Base.identify_package("TestPkg"))
     popfirst!(Base.LOAD_PATH)
 end
 
-@everywhere using Test, Random, LinearAlgebra
+using Test, Random, LinearAlgebra
+
+# Test that modules are loaded on workers despite a using; addprocs; using chain
+# see https://github.com/JuliaLang/julia/issues/28859
+for w in workers()
+    mods = remotecall_fetch(()->map(string, values(Base.loaded_modules)), w)
+    @test "Test" in mods
+    @test "Random" in mods
+    @test "LinearAlgebra" in mods
+end
 
 id_me = myid()
 id_other = filter(x -> x != id_me, procs())[rand(1:(nprocs()-1))]
